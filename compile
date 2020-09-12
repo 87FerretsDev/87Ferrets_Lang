@@ -37,6 +37,8 @@ if test -f "$1"; then
 else
     raise_error "Missing Information" "File argument specified ($1) is missing or does not exist."
 fi
+
+[ -s $SOURCE_FILE ] && echo "INFO: File not empty" || raise_error "Empty File" "The file you provided is empty."
 # --------- END- PREPARE FOR COMPILATION ---------
 BASENAME=$(echo "$SOURCE_FILE" | cut -f 1 -d '.')
 
