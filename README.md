@@ -3,7 +3,7 @@ A shell script that converts 87F files (usually .87f) to an executable.
 
 # How to run
 ## Install
-Just run ``./install`` and fill out details when asked
+It should come installed.
 ## Compile
 Run ``./compile FILENAME`` (FILENAME = name of file)
 
