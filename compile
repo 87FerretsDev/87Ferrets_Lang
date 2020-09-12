@@ -1,0 +1,123 @@
+#!/bin/bash
+function raise_error {
+    RED='\033[1;31m'
+    NC='\033[0m'
+    NCBOLD='\033[1;37m'
+    printf "${RED}$1${NCBOLD}: $2${NC} The operation has stopped due to this error.\n"
+    exit
+}
+
+# --------- BEGIN- PREPARE FOR COMPILATION ---------
+if test -f "preferences.cfg"; then
+    . preferences.cfg
+else
+    raise_error "Configuration Error" "Missing 'preferences.cfg' file."
+fi
+
+if [ -d $COMPONENT_DIR ]; then
+    echo "INFO: Using COMPONENT_DIR specified in preferences.cfg ($COMPONENT_DIR)"
+else
+    raise_error "Configuration Error" "COMPONENT_DIR specified in preferences.cfg does not exist."
+fi
+
+if [ -d $BUILD_DIR ]; then
+    echo "INFO: Using BUILD_DIR specified in preferences.cfg ($BUILD_DIR)"
+else
+    raise_error "Configuration Error" "BUILD_DIR specified in preferences.cfg does not exist."
+fi
+
+if [[ $1 == "" ]]; then
+    raise_error "Missing Information" "I need a file to compile! Please run again using syntax ./compile FILENAME."
+fi
+
+if test -f "$1"; then
+    echo "INFO: Parsing file... ($1)"
+    echo -e "\n" >> "$1"
+    SOURCE_FILE=$1
+else
+    raise_error "Missing Information" "File argument specified ($1) is missing or does not exist."
+fi
+# --------- END- PREPARE FOR COMPILATION ---------
+BASENAME=$(echo "$SOURCE_FILE" | cut -f 1 -d '.')
+
+function BUILD_EXISTS {
+    read -p "The build directory '$BUILD_DIR/$BASENAME' exists, do you want to overwrite it? [Y/N]: " REPLY
+    if [[ $REPLY == "Y" || $REPLY == "y" ]]; then
+        rm -rf $BUILD_DIR/$BASENAME/
+    elif [[ $REPLY == "n" || $REPLY == "N" ]]; then
+        echo -e "\nI cannot go on, please call the file a different name and try again."
+        raise_error "Cancelled" "The user cancelled the compilation."
+    else 
+        echo "Unknown: $REPLY. Try again"
+        BUILD_EXISTS
+    fi
+}
+
+if [ -d $BUILD_DIR/$BASENAME ]; then
+    BUILD_EXISTS
+fi
+mkdir $BUILD_DIR/$BASENAME || raise_error "MKDIR Error" "Could not make build directory $BUILD_DIR/$BASENAME. Is this directory writable?"
+LINE_NUM=0
+
+function parse {
+    FUNCTION_NAME=$(echo $CURRENT_LINE  | head -n1 | cut -d " " -f1)
+    if [[ $FUNCTION_NAME == "" ]]; then
+        return
+    fi
+    if test -f $COMPONENT_DIR/$FUNCTION_NAME; then
+        echo "INFO: Found command, copying to neededCommands in $BUILD_DIR/$BASENAME... ($FUNCTION_NAME)"
+        if test -f $BUILD_DIR/$BASENAME/neededCommands/$FUNCTION_NAME; then
+            echo "INFO: The command already exists! Ignoring... ($FUNCTION_NAME)"
+        else
+            cp "$COMPONENT_DIR/$FUNCTION_NAME" "$BUILD_DIR/$BASENAME/neededCommands/$FUNCTION_NAME"
+            if test -f $BUILD_DIR/$BASENAME/neededCommands/$FUNCTION_NAME; then
+                echo "INFO: Copied to $BUILD_DIR/$BASENAME/neededCommands/$FUNCTION_NAME. ($FUNCTION_NAME)"
+            else
+                raise_error "Execution Error" "The could not copy: $BUILD_DIR/$BASENAME/neededCommands/$FUNCTION_NAME ($FUNCTION_NAME)"
+            fi
+        fi
+    else
+        raise_error "Syntax Error (line: $LINE_NUM)" "Command '$FUNCTION_NAME' not found."
+    fi
+}
+if [ -d $BUILD_DIR/$BASENAME/neededCommands ]; then
+    rm -rf $BUILD_DIR/$BASENAME/neededCommands/
+    mkdir $BUILD_DIR/$BASENAME/neededCommands
+else
+    mkdir $BUILD_DIR/$BASENAME/neededCommands
+fi
+while read line; 
+do 
+    ((LINE_NUM+=1))
+    CURRENT_LINE=$line
+    parse
+done < $SOURCE_FILE
+
+echo "INFO: Copying... (source: $SOURCE_FILE, target: $BUILD_DIR/$BASENAME/$BASENAME.87f)"
+cp "$SOURCE_FILE" "$BUILD_DIR/$BASENAME/$BASENAME.87f"
+echo "Verifying..."
+if test -f $BUILD_DIR/$BASENAME/$BASENAME.87f; then
+    echo "INFO: Copied successfully."
+else
+    raise_error "Execution Error" "Cannot copy: $BUILD_DIR/$BASENAME/$BASENAME.87f"
+fi
+
+echo "INFO: Building shell script ($BUILD_DIR/$BASENAME/test.sh)..."
+for f in $BUILD_DIR/$BASENAME/neededCommands/*; do
+    BASE_COMMAND_NAME=$(basename $f)
+    echo -e "\t--> Adding component... ($BASE_COMMAND_NAME)"
+    echo "
+    function $BASE_COMMAND_NAME() {
+        $(cat $f)
+    }
+    " >> $BUILD_DIR/$BASENAME/test.sh
+done
+echo -e "\t--> Adding script $BUILD_DIR/$BASENAME/$BASENAME.87f..."
+echo "$(cat $BUILD_DIR/$BASENAME/$BASENAME.87f)" >> $BUILD_DIR/$BASENAME/test.sh
+echo -e "INFO: Chmod script..."
+chmod u+x $BUILD_DIR/$BASENAME/test.sh || raise_error "Execution error" "Could not chmod file"
+echo "Done!"
+
+GREEN='\033[1;32m'
+NC='\033[0m'
+echo -e "${GREEN}Yay! Success.${NC} Your file is ready to be executed, please use the command './$BUILD_DIR/$BASENAME/test.sh' to execute it!"
