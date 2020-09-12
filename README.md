@@ -1,5 +1,5 @@
 # 87Ferrets_Lang
-A shell script that converts 87F files (usually .87f) to an executable.
+A shell script that converts 87F files (usually ``*.87f``) to an executable.
 
 # How to run
 ## Install
