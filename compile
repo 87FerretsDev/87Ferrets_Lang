@@ -41,7 +41,9 @@ else
     raise_error "Missing Information" "File argument specified ($1) is missing or does not exist."
 fi
 
-[ -s $SOURCE_FILE ] && echo "INFO: File not empty" || raise_error "Empty File" "The file you provided is empty."
+if [[ $(cat $SOURCE_FILE | xargs) == "" ]]; then
+    raise_error "Empty File" "The file you provided is empty."
+fi
 # --------- END- PREPARE FOR COMPILATION ---------
 BASENAME=$(basename "$SOURCE_FILE")
 
