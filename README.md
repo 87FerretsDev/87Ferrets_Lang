@@ -8,6 +8,7 @@ To install the program, please run ``./install``. This script should be availabl
 
 ## Compile
 Run ``./compile FILENAME`` (FILENAME = name of file)
+
 If you would like to run the file immediately after, please use ``./compile FILENAME --run`` (FILENAME = name of file)
 
 # Example code
