@@ -7,6 +7,9 @@ function raise_error {
     exit
 }
 
+if [[ $2 == "--run" ]]; then
+    RUN_AFTER="YES"
+fi
 # --------- BEGIN- PREPARE FOR COMPILATION ---------
 if test -f "preferences.cfg"; then
     . preferences.cfg
@@ -26,7 +29,7 @@ else
     raise_error "Configuration Error" "BUILD_DIR specified in preferences.cfg does not exist."
 fi
 
-if [[ $1 == "" ]]; then
+if [[ $1 = "" ]]; then
     raise_error "Missing Information" "I need a file to compile! Please run again using syntax ./compile FILENAME."
 fi
 
@@ -96,9 +99,9 @@ do
 done < $SOURCE_FILE
 
 echo "INFO: Copying... (source: $SOURCE_FILE, target: $BUILD_DIR/$BASENAME/$BASENAME.87f)"
-cp "$SOURCE_FILE" "$BUILD_DIR/$BASENAME/$BASENAME.87f"
+cp "$SOURCE_FILE" "$BUILD_DIR/$BASENAME/$BASENAME"
 echo "Verifying..."
-if test -f $BUILD_DIR/$BASENAME/$BASENAME.87f; then
+if test -f $BUILD_DIR/$BASENAME/$BASENAME; then
     echo "INFO: Copied successfully."
 else
     raise_error "Execution Error" "Cannot copy: $BUILD_DIR/$BASENAME/$BASENAME.87f"
@@ -114,12 +117,27 @@ for f in $BUILD_DIR/$BASENAME/neededCommands/*; do
     }
     " >> $BUILD_DIR/$BASENAME/test.sh
 done
-echo -e "\t--> Adding script $BUILD_DIR/$BASENAME/$BASENAME.87f..."
-echo "$(cat $BUILD_DIR/$BASENAME/$BASENAME.87f)" >> $BUILD_DIR/$BASENAME/test.sh
+echo -e "\t--> Adding script $BUILD_DIR/$BASENAME/$BASENAME..."
+echo "$(cat $BUILD_DIR/$BASENAME/$BASENAME)" >> $BUILD_DIR/$BASENAME/test.sh
 echo -e "INFO: Chmod script..."
 chmod u+x $BUILD_DIR/$BASENAME/test.sh || raise_error "Execution error" "Could not chmod file"
 echo "Done!"
 
 GREEN='\033[1;32m'
 NC='\033[0m'
-echo -e "${GREEN}Yay! Success.${NC} Your file is ready to be executed, please use the command './$BUILD_DIR/$BASENAME/test.sh' to execute it!"
+echo -e "${GREEN}Yay! Success.${NC} Your file is ready to be executed, please use the command 'bash $BUILD_DIR/$BASENAME/test.sh' to execute it!"
+if [[ $RUN_AFTER == "YES" ]]; then
+    clear
+    echo -ne "Executing file in 5...\\r"
+    sleep 1
+    echo -ne "Executing file in 4...\\r"
+    sleep 1
+    echo -ne "Executing file in 3...\\r"
+    sleep 1
+    echo -ne "Executing file in 2...\\r"
+    sleep 1
+    echo -ne "Executing file in 1...\\r"
+    sleep 1
+    clear
+    bash $BUILD_DIR/$BASENAME/test.sh
+fi 
